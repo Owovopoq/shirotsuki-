@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="scroll-smooth dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>//SHIROTSUKI</title>
+  <link rel="icon" type="image/jpeg" href="https://i.meee.com.tw/bHIIAAk.jpg" />
+  <meta name="description"白月的小黑屋"/>
+
+  <!-- 載入 Google Fonts：Noto Sans TC 與 JetBrains Mono 等寬編號字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind 自訂設定：編輯系紙感色票與字體系統 -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Noto Sans TC', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            paper: {
+              light: '#F7F6F2',
+              lightCard: '#EFECE6',
+              lightBorder: '#E2E0D8',
+              dark: '#111110',
+              darkCard: '#171715',
+              darkBorder: '#262624',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- 初始化深／淺色主題（預設深色紙感 #111110） -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('shirotsuki-zine-theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+
+    /**
+     * 提前於 <head> 定義圖片備援繪製函式，確保 <img> 觸發 onerror 時函式已就緒
+     */
+    window.renderFlandreFallback = function (imgEl) {
+      if (!imgEl || imgEl.dataset.fallbackApplied === 'true') return;
+      imgEl.dataset.fallbackApplied = 'true';
+      imgEl.src = 'https://placehold.co/640x640/171715/8E8D87?text=SHIROTSUKI';
+    };
+  </script>
+
+  <!-- 極簡編輯系微互動樣式（無漸層光暈、無玻璃擬態） -->
+  <style>
+    /* 細微紙張顆粒質感 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      opacity: 0.02;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* 捲動淡入轉場 */
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 正在播放中的 Spotify 曲目卡片細邊框高亮 */
+    .track-card {
+      transition: border-color 0.25s ease, background-color 0.25s ease;
+    }
+    .track-card.is-playing {
+      border-color: #10B981 !important;
+    }
+
+    /* 播放中指示點呼吸燈 */
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.8); }
+    }
+    .playing-dot {
+      animation: pulseDot 1.4s ease-in-out infinite;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3A3A36;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body class="bg-paper-light text-[#1A1A18] dark:bg-paper-dark dark:text-[#ECEBE6] font-sans antialiased selection:bg-[#10B981] selection:text-white transition-colors duration-200 overflow-x-hidden">
+
+  <!-- ==================== 1. 頂部極簡導覽列 ==================== -->
+  <header class="sticky top-0 z-30 bg-paper-light dark:bg-paper-dark border-b border-paper-lightBorder dark:border-paper-darkBorder">
+    <nav class="max-w-5xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between" aria-label="主導覽列">
+      
+      <!-- 左側品牌標誌：白月月月 // SHIROTSUKI -->
+      <a href="#hero" class="flex items-baseline gap-2.5 group focus:outline-none">
+        <span class="text-base sm:text-lg font-black tracking-tight text-[#1A1A18] dark:text-[#ECEBE6]">
+          Yue
+        </span>
+        <span class="font-mono text-[11px] tracking-[0.16em] uppercase text-[#6E6D68] dark:text-[#8E8D87] group-hover:text-[#059669] dark:group-hover:text-[#10B981] transition-colors">
+          // SHIROTSUKI
+        </span>
+      </a>
+
+      <!-- 右側導覽連結與深淺色切換鈕 -->
+      <div class="flex items-center gap-1 sm:gap-2">
+        <div class="hidden sm:flex items-center gap-1">
+          <a href="#about" class="px-3 py-1.5 rounded text-sm font-medium text-[#575652] dark:text-[#A3A29C] hover:text-[#1A1A18] dark:hover:text-white hover:bg-paper-lightCard dark:hover:bg-paper-darkCard transition-colors">
+            想認識我嗎嘿嘿嘿真乖
+          </a>
+          <a href="#music" class="px-3 py-1.5 rounded text-sm font-medium text-[#575652] dark:text-[#A3A29C] hover:text-[#1A1A18] dark:hover:text-white hover:bg-paper-lightCard dark:hover:bg-paper-darkCard transition-colors">
+            音樂
+          </a>
+          <a href="#contact" class="px-3 py-1.5 rounded text-sm font-medium text-[#575652] dark:text-[#A3A29C] hover:text-[#1A1A18] dark:hover:text-white hover:bg-paper-lightCard dark:hover:bg-paper-darkCard transition-colors">
+            來罵我
+          </a>
+        </div>
+
+        <!-- 深／淺色主題切換鈕 -->
+        <button id="theme-toggle" type="button" aria-label="切換深色或淺色主題" class="ml-1 p-2 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard text-[#1A1A18] dark:text-[#ECEBE6] hover:border-[#059669] dark:hover:border-[#10B981] transition-colors focus:outline-none">
+          <!-- 太陽（深色模式下顯示） -->
+          <svg class="w-4 h-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+          <!-- 月亮（淺色模式下顯示） -->
+          <svg class="w-4 h-4 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+
+        <!-- 手機版選單鈕 -->
+        <button id="mobile-menu-btn" type="button" aria-label="開啟選單" aria-expanded="false" class="sm:hidden p-2 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard text-[#1A1A18] dark:text-[#ECEBE6]">
+          <svg id="menu-icon-open" class="w-4 h-4 block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="7" x2="21" y2="7"></line>
+            <line x1="3" y1="17" x2="21" y2="17"></line>
+          </svg>
+          <svg id="menu-icon-close" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- 手機版折疊導覽 -->
+    <div id="mobile-menu" class="hidden sm:hidden border-t border-paper-lightBorder dark:border-paper-darkBorder bg-paper-light dark:bg-paper-dark px-5 py-3 space-y-1">
+      <a href="#about" class="mobile-nav-link block py-2 text-sm font-medium text-[#575652] dark:text-[#A3A29C] hover:text-[#059669] dark:hover:text-[#10B981]">叫媽媽</a>
+      <a href="#music" class="mobile-nav-link block py-2 text-sm font-medium text-[#575652] dark:text-[#A3A29C] hover:text-[#059669] dark:hover:text-[#10B981]">我的音樂品味夯爆了</a>
+      <a href="#contact" class="mobile-nav-link block py-2 text-sm font-medium text-[#575652] dark:text-[#A3A29C] hover:text-[#059669] dark:hover:text-[#10B981]">來找我的媽真害羞呢</a>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-5 sm:px-8">
+
+    <!-- ==================== 2. 首屏 Hero（不對稱兩欄編輯網格） ==================== -->
+    <section id="hero" class="py-16 sm:py-24 md:py-28 border-b border-paper-lightBorder dark:border-paper-darkBorder">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 items-center">
+        
+        <!-- 左欄：文字與行動呼籲（佔 7 欄） -->
+        <div class="md:col-span-7 space-y-6">
+          <div class="inline-flex items-center gap-2 font-mono text-xs tracking-[0.14em] uppercase text-[#059669] dark:text-[#10B981]">
+            <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+            <span>01 // PROFILE</span>
+          </div>
+
+          <div class="space-y-3">
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#1A1A18] dark:text-[#ECEBE6] leading-[1.1]">
+              白月
+            </h1>
+              <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#1A1A18] dark:text-[#ECEBE6] leading-[1.1]"></h1>
+                (數學+生物準備重補修.ver)
+              </h1>
+            <p class="text-lg sm:text-xl font-medium text-[#575652] dark:text-[#A3A29C]">
+              憨仔
+            </p>
+          </div>
+
+          <p class="text-sm sm:text-base text-[#6E6D68] dark:text-[#8E8D87] max-w-lg leading-relaxed">
+            憨仔黑鬼
+          </p>
+
+          <!-- 主行動按鈕 -->
+          <div class="pt-2 flex flex-wrap items-center gap-3">
+            <a href="#music" class="px-5 py-2.5 rounded bg-[#1A1A18] text-[#F7F6F2] dark:bg-[#ECEBE6] dark:text-[#111110] text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center gap-2">
+              <span>不要再聽威孟三百天了</span>
+              <span class="font-mono text-xs">↓</span>
+            </a>
+            <a href="#contact" class="px-5 py-2.5 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard text-[#1A1A18] dark:text-[#ECEBE6] text-sm font-semibold hover:border-[#059669] dark:hover:border-[#10B981] transition-colors">
+              想罵我
+            </a>
+          </div>
+        </div>
+
+        <!-- 右欄：純淨固定 1:1 細邊框相框（僅由你自己在程式碼中更換圖片路徑，無任何訪客上傳功能） -->
+        <div class="md:col-span-5 flex justify-start md:justify-end">
+          <!--
+            =========================================================================
+            [自訂個人圖片區]
+            已直接套用你提供的圖床圖片網址，若未來想更換，直接修改下方 src 屬性即可。
+            =========================================================================
+          -->
+          <figure class="w-full max-w-[320px] rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard overflow-hidden">
+            <div class="aspect-square w-full overflow-hidden bg-[#24161A] relative">
+              <img
+                id="hero-portrait"
+                src="https://i.meee.com.tw/bHIIAAk.jpg"
+                alt="白月月月 — 個人頭像"
+                class="w-full h-full object-cover block"
+                onerror="renderFlandreFallback(this)"
+              />
+            </div>
+            <figcaption class="px-3.5 py-2.5 border-t border-paper-lightBorder dark:border-paper-darkBorder flex items-center justify-between font-mono text-[11px] text-[#6E6D68] dark:text-[#8E8D87]">
+              <span>FIG. 01 — SHIROTSUKI</span>
+              <span>1:1</span>
+            </figcaption>
+          </figure>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 3. 02 / 關於我（單欄編輯排版，無數據統計卡片） ==================== -->
+    <section id="about" class="py-16 sm:py-24 border-b border-paper-lightBorder dark:border-paper-darkBorder reveal">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
+        
+        <!-- 左側章節編號 -->
+        <div class="md:col-span-4 space-y-1.5">
+          <span class="font-mono text-xs tracking-wider text-[#059669] dark:text-[#10B981]">
+            02 // ABOUT
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A1A18] dark:text-[#ECEBE6]">
+            關於憨仔
+          </h2>
+        </div>
+
+        <!-- 右側自我介紹與俐落細邊框標籤 -->
+        <div class="md:col-span-8 space-y-6">
+          <div class="space-y-4 text-base sm:text-[17px] text-[#3B3A37] dark:text-[#C8C7C1] leading-[1.85]">
+            <p>
+              白月本月 高一學店學生 懷德榮譽憨仔校友(並沒有) 
+            </p>
+            <p>
+              我要被高中難死了救救孩子吧
+            </p>
+            <p>
+              INTP 15y 
+            </p>
+            <p>
+              喔有想到再補然後我喜歡水族箱寶寶寶寶
+            </p>
+            <p>
+              欸不是我要回去讀段考了我數學小考沒及格過
+            </p>
+            <p>
+              想找我（開盒）去底下愛你們
+            </p>
+          </div>
+
+          <!-- 俐落細邊框技能／興趣標籤 -->
+          <div class="pt-2 flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard font-mono text-xs text-[#3B3A37] dark:text-[#C8C7C1]">
+              羅布勒斯大學榮譽校友
+            </span>
+            <span class="px-3 py-1 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard font-mono text-xs text-[#3B3A37] dark:text-[#C8C7C1]">
+              Rhythm Games(拉完了)
+            </span>
+            <span class="px-3 py-1 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard font-mono text-xs text-[#3B3A37] dark:text-[#C8C7C1]">
+              Discord Bot
+            </span>
+            <span class="px-3 py-1 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard font-mono text-xs text-[#3B3A37] dark:text-[#C8C7C1]">
+              HTML5 / Python / C++
+            </span>
+            <span class="px-3 py-1 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard font-mono text-xs text-[#3B3A37] dark:text-[#C8C7C1]">
+              當黑鬼
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 4. 03 / 音樂（Spotify IFrame API 單曲互斥播放） ==================== -->
+    <section id="music" class="py-16 sm:py-24 border-b border-paper-lightBorder dark:border-paper-darkBorder reveal">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
+        
+        <!-- 左側章節標題 -->
+        <div class="md:col-span-4 space-y-1.5">
+          <span class="font-mono text-xs tracking-wider text-[#059669] dark:text-[#10B981]">
+            03 // 我很有品味(拜託主人喵喵)
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A1A18] dark:text-[#ECEBE6]">
+            音樂
+          </h2>
+        </div>
+
+        <!-- 右側 5 首 Spotify 播放器清單（無文字簡介、無分類篩選或彈窗） -->
+        <div class="md:col-span-8">
+          <div id="spotify-tracks-list" class="space-y-4">
+            <!-- 由下方 JavaScript 透過 Spotify Embed IFrame API 動態掛載 5 首曲目控制器 -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 5. 04 / 聯絡我（條列式編輯卡片） ==================== -->
+    <section id="contact" class="py-16 sm:py-24 reveal">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
+        
+        <!-- 左側章節標題 -->
+        <div class="md:col-span-4 space-y-1.5">
+          <span class="font-mono text-xs tracking-wider text-[#059669] dark:text-[#10B981]">
+            04 // CONTACT
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A1A18] dark:text-[#ECEBE6]">
+            開我盒啊
+          </h2>
+        </div>
+
+        <!-- 右側條列式聯絡卡片 -->
+        <div class="md:col-span-8 divide-y divide-paper-lightBorder dark:divide-paper-darkBorder border border-paper-lightBorder dark:border-paper-darkBorder rounded bg-paper-lightCard dark:bg-paper-darkCard">
+          
+          <!-- 項目 1：Email -->
+          <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <span class="font-mono text-[11px] uppercase tracking-wider text-[#6E6D68] dark:text-[#8E8D87]">
+                EMAIL
+              </span>
+              <p class="font-mono text-sm sm:text-base font-medium text-[#1A1A18] dark:text-[#ECEBE6] select-all">
+                yueue277@gmail.com
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button id="copy-email-btn" type="button" class="px-3.5 py-2 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-light dark:bg-paper-dark text-xs font-medium text-[#1A1A18] dark:text-[#ECEBE6] hover:border-[#059669] dark:hover:border-[#10B981] transition-colors">
+                <span id="copy-email-text">複製信箱</span>
+              </button>
+              <a href="mailto:yueue277@gmail.com" class="px-3.5 py-2 rounded bg-[#1A1A18] text-[#F7F6F2] dark:bg-[#ECEBE6] dark:text-[#111110] text-xs font-semibold hover:opacity-90 transition-opacity">
+                寄送郵件 ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- 項目 2：Discord -->
+          <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <span class="font-mono text-[11px] uppercase tracking-wider text-[#6E6D68] dark:text-[#8E8D87]">
+                DISCORD
+              </span>
+              <p class="font-mono text-sm sm:text-base font-medium text-[#1A1A18] dark:text-[#ECEBE6] select-all">
+                shirotsuki1
+              </p>
+            </div>
+            <div class="shrink-0">
+              <button id="copy-dc-btn" type="button" class="px-3.5 py-2 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-light dark:bg-paper-dark text-xs font-medium text-[#1A1A18] dark:text-[#ECEBE6] hover:border-[#059669] dark:hover:border-[#10B981] transition-colors">
+                <span id="copy-dc-text">複製 ID</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 項目 3：Instagram -->
+          <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <span class="font-mono text-[11px] uppercase tracking-wider text-[#6E6D68] dark:text-[#8E8D87]">
+                INSTAGRAM
+              </span>
+              <p class="font-mono text-sm sm:text-base font-medium text-[#1A1A18] dark:text-[#ECEBE6]">
+                @owovopoqo
+              </p>
+            </div>
+            <div class="shrink-0">
+              <a href="https://www.instagram.com/owovopoqo/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-light dark:bg-paper-dark text-xs font-medium text-[#1A1A18] dark:text-[#ECEBE6] hover:border-[#059669] dark:hover:border-[#10B981] transition-colors">
+                <span>前往個人頁面</span>
+                <span>↗</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== 6. 簡潔頁尾 ==================== -->
+  <footer class="border-t border-paper-lightBorder dark:border-paper-darkBorder py-8">
+    <div class="max-w-5xl mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="font-mono text-xs text-[#6E6D68] dark:text-[#8E8D87]">
+        ---SHIROTSUKI
+      </p>
+      <button id="back-to-top" type="button" class="font-mono text-xs text-[#6E6D68] dark:text-[#8E8D87] hover:text-[#059669] dark:hover:text-[#10B981] transition-colors">
+        TOP ↑
+      </button>
+    </div>
+  </footer>
+
+  <!-- ==================== 極簡底部提示氣泡（Toast） ==================== -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- 載入官方 Spotify Embed IFrame API -->
+  <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+
+  <!-- ==================== 核心互動、圖片備援渲染與 Spotify 互斥播放控制腳本 ==================== -->
+  <script>
+    // 指定的 5 首 Spotify 曲目清單
+    const SPOTIFY_TRACKS = [
+      { id: '2vjUlj9rBorLlK1bZq88gH', uri: 'spotify:track:2vjUlj9rBorLlK1bZq88gH' },
+      { id: '40dOv7XsKEENP2zOM6byfU', uri: 'spotify:track:40dOv7XsKEENP2zOM6byfU' },
+      { id: '3UIeBsIHpvcHOjotNeOorA', uri: 'spotify:track:3UIeBsIHpvcHOjotNeOorA' },
+      { id: '3wJHCry960drNlAUGrJLmz', uri: 'spotify:track:3wJHCry960drNlAUGrJLmz' },
+      { id: '3WtIXrla0ovC9MOIY78Vr8', uri: 'spotify:track:3WtIXrla0ovC9MOIY78Vr8' }
+    ];
+
+    // 儲存所有 Spotify EmbedController 實例與目前正在播放的索引
+    const spotifyControllers = new Array(SPOTIFY_TRACKS.length).fill(null);
+    let activeTrackIndex = -1;
+    let spotifyApiInitialized = false;
+
+    /**
+     * 更新曲目卡片的「NOW PLAYING」細邊框高亮與狀態文字標記
+     */
+    function updatePlayingVisuals(playingIdx) {
+      SPOTIFY_TRACKS.forEach((_, idx) => {
+        const card = document.getElementById(`track-card-${idx}`);
+        const badge = document.getElementById(`track-status-${idx}`);
+        if (!card || !badge) return;
+
+        if (idx === playingIdx) {
+          card.classList.add('is-playing');
+          badge.classList.remove('hidden');
+          badge.classList.add('inline-flex');
+        } else {
+          card.classList.remove('is-playing');
+          badge.classList.add('hidden');
+          badge.classList.remove('inline-flex');
+        }
+      });
+    }
+
+    /**
+     * 建立 5 首曲目的 DOM 容器（無任何歌曲文字簡介、分類篩選或彈窗）
+     */
+    function buildTrackContainers() {
+      const listContainer = document.getElementById('spotify-tracks-list');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = SPOTIFY_TRACKS.map((track, index) => {
+        const trackNum = String(index + 1).padStart(2, '0');
+        return `
+          <div id="track-card-${index}" class="track-card rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-paper-lightCard dark:bg-paper-darkCard p-3">
+            <div class="flex items-center justify-between mb-2 px-0.5">
+              <span class="font-mono text-[11px] text-[#6E6D68] dark:text-[#8E8D87]">
+                TRACK ${trackNum}
+              </span>
+              <span id="track-status-${index}" class="hidden items-center gap-1.5 font-mono text-[11px] font-medium text-[#059669] dark:text-[#10B981]">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#10B981] playing-dot"></span>
+                <span>NOW PLAYING</span>
+              </span>
+            </div>
+            <div id="spotify-embed-slot-${index}" class="w-full min-h-[152px] rounded overflow-hidden"></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * 備援機制：若外部 IFrame API 腳本因環境延遲未觸發，仍渲染標準 Spotify 播放器確保正常使用
+     */
+    function renderFallbackIframes() {
+      if (spotifyApiInitialized) return;
+      const isDark = document.documentElement.classList.contains('dark');
+      const themeParam = isDark ? '0' : '1';
+
+      SPOTIFY_TRACKS.forEach((track, index) => {
+        const slot = document.getElementById(`spotify-embed-slot-${index}`);
+        if (slot && slot.children.length === 0) {
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=${themeParam}`;
+          iframe.width = '100%';
+          iframe.height = '152';
+          iframe.style.borderRadius = '4px';
+          iframe.frameBorder = '0';
+          iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+          iframe.loading = 'lazy';
+          iframe.title = `Spotify Track ${index + 1}`;
+          slot.appendChild(iframe);
+        }
+      });
+    }
+
+    /**
+     * Spotify Embed IFrame API 就緒回呼：
+     * 為每首曲目建立獨立 EmbedController，並監聽 playback_update 實現單曲互斥播放
+     */
+    window.onSpotifyIframeApiReady = (IFrameAPI) => {
+      spotifyApiInitialized = true;
+      const isDark = document.documentElement.classList.contains('dark');
+
+      SPOTIFY_TRACKS.forEach((track, index) => {
+        const slot = document.getElementById(`spotify-embed-slot-${index}`);
+        if (!slot) return;
+
+        // 清空可能存在的備援 iframe，改由正式 API 接管
+        slot.innerHTML = '';
+
+        const options = {
+          uri: track.uri,
+          width: '100%',
+          height: '152',
+          theme: isDark ? 'dark' : 'light'
+        };
+
+        IFrameAPI.createController(slot, options, (EmbedController) => {
+          spotifyControllers[index] = EmbedController;
+
+          EmbedController.addListener('playback_update', (e) => {
+            if (!e || !e.data) return;
+            const isPaused = e.data.isPaused;
+
+            if (!isPaused) {
+              // 若目前有另一首歌曲正在播放，立即暫停先前的控制器
+              if (activeTrackIndex !== -1 && activeTrackIndex !== index) {
+                const prevController = spotifyControllers[activeTrackIndex];
+                if (prevController && typeof prevController.pause === 'function') {
+                  prevController.pause();
+                }
+              }
+              activeTrackIndex = index;
+              updatePlayingVisuals(index);
+            } else if (activeTrackIndex === index) {
+              // 若目前播放中的曲目被手動暫停，清除高亮提示
+              activeTrackIndex = -1;
+              updatePlayingVisuals(-1);
+            }
+          });
+        });
+      });
+    };
+
+    /**
+     * 顯示極簡底部通知氣泡
+     */
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto px-4 py-2.5 rounded border border-paper-lightBorder dark:border-paper-darkBorder bg-[#1A1A18] text-[#F7F6F2] dark:bg-[#ECEBE6] dark:text-[#111110] font-mono text-xs transform translate-y-2 opacity-0 transition-all duration-200';
+      toast.textContent = message;
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 220);
+      }, 2400);
+    }
+
+    /**
+     * 通用一鍵複製文字工具
+     */
+    function copyTextToClipboard(text, successMsg) {
+      const tempArea = document.createElement('textarea');
+      tempArea.value = text;
+      tempArea.style.position = 'fixed';
+      tempArea.style.opacity = '0';
+      document.body.appendChild(tempArea);
+      tempArea.select();
+
+      try {
+        document.execCommand('copy');
+        showToast(successMsg);
+        return true;
+      } catch (err) {
+        showToast('複製失敗，請手動選取複製');
+        return false;
+      } finally {
+        document.body.removeChild(tempArea);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // 檢查首屏圖片是否因預覽環境限制載入失敗（naturalWidth === 0）
+      const heroImg = document.getElementById('hero-portrait');
+      if (heroImg && heroImg.complete && heroImg.naturalWidth === 0) {
+        renderFlandreFallback(heroImg);
+      }
+
+      // 1. 初始化 Spotify 曲目容器，並設定 2.5 秒後若 API 未就緒則啟用標準 iframe 備援
+      buildTrackContainers();
+      setTimeout(renderFallbackIframes, 2500);
+
+      // 2. 深／淺色主題切換（保持 Spotify 控制器實例穩定不重載，確保互斥播放不中斷）
+      document.getElementById('theme-toggle').addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('shirotsuki-zine-theme', isDark ? 'dark' : 'light');
+      });
+
+      // 3. 手機版選單切換
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const iconOpen = document.getElementById('menu-icon-open');
+      const iconClose = document.getElementById('menu-icon-close');
+
+      function toggleMobileMenu(forceClose = false) {
+        const isHidden = mobileMenu.classList.contains('hidden');
+        const shouldOpen = forceClose ? false : isHidden;
+        mobileMenu.classList.toggle('hidden', !shouldOpen);
+        iconOpen.classList.toggle('hidden', shouldOpen);
+        iconClose.classList.toggle('hidden', !shouldOpen);
+        mobileMenuBtn.setAttribute('aria-expanded', String(shouldOpen));
+      }
+
+      mobileMenuBtn.addEventListener('click', () => toggleMobileMenu());
+      document.querySelectorAll('.mobile-nav-link').forEach(link => {
+        link.addEventListener('click', () => toggleMobileMenu(true));
+      });
+
+      // 4. 一鍵複製 Email 與 Discord ID
+      const copyEmailBtn = document.getElementById('copy-email-btn');
+      const copyEmailText = document.getElementById('copy-email-text');
+      copyEmailBtn.addEventListener('click', () => {
+        const ok = copyTextToClipboard('yueue277@gmail.com', 'COPIED: yueue277@gmail.com');
+        if (ok) {
+          copyEmailText.textContent = '已複製';
+          setTimeout(() => {
+            copyEmailText.textContent = '複製信箱';
+          }, 2000);
+        }
+      });
+
+      const copyDcBtn = document.getElementById('copy-dc-btn');
+      const copyDcText = document.getElementById('copy-dc-text');
+      copyDcBtn.addEventListener('click', () => {
+        const ok = copyTextToClipboard('shirotsuki1', 'COPIED: shirotsuki1');
+        if (ok) {
+          copyDcText.textContent = '已複製';
+          setTimeout(() => {
+            copyDcText.textContent = '複製 ID';
+          }, 2000);
+        }
+      });
+
+      // 5. 回到頂部
+      document.getElementById('back-to-top').addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // 6. 捲動淡入動畫
+      const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    });
+  </script>
+</body>
+</html>
